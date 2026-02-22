@@ -28,7 +28,14 @@ class AppCoordinator: Coordinator {
     
     func start() {
         let exchangeViewModel = ExchangeListViewModel()
+        exchangeViewModel.coordinator = self
         let exchangeVC = ExchangeListViewController(viewModel: exchangeViewModel)
         navigationController.pushViewController(exchangeVC, animated: false)
+    }
+    
+    func showExchangeDetail(exchange: Exchange) {
+        let detailViewModel = ExchangeDetailViewModel(exchangeId: exchange.id, exchangeName: exchange.name)
+        let detailVC = ExchangeDetailViewController(viewModel: detailViewModel)
+        navigationController.pushViewController(detailVC, animated: true)
     }
 }

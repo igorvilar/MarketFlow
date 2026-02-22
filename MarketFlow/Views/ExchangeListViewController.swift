@@ -130,6 +130,12 @@ extension ExchangeListViewController: UITableViewDataSource, UITableViewDelegate
         view.backgroundColor = .clear
         return view
     }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        let exchange = viewModel.exchanges[indexPath.section]
+        viewModel.delegate?.didSelectExchange(exchange)
+    }
 }
 
 // MARK: - ViewModel Delegate
@@ -149,5 +155,9 @@ extension ExchangeListViewController: ExchangeListViewModelDelegate {
             loadingIndicator.stopAnimating()
             showErrorAlert(message: message)
         }
+    }
+    
+    func didSelectExchange(_ exchange: Exchange) {
+        viewModel.coordinator?.showExchangeDetail(exchange: exchange)
     }
 }

@@ -10,6 +10,8 @@ import Foundation
 protocol MarketDataServiceProtocol {
     func fetchExchanges(limit: Int) async throws -> [Exchange]
     func fetchCoins(limit: Int) async throws -> [Coin]
+    func fetchExchangeDetails(id: Int) async throws -> ExchangeDetail
+    func fetchExchangeAssets(id: Int) async throws -> [Asset]
 }
 
 class MarketDataService: MarketDataServiceProtocol {
@@ -65,6 +67,45 @@ class MarketDataService: MarketDataServiceProtocol {
         
         do {
             let response = try JSONDecoder().decode(CoinResponse.self, from: data)
+            return response.data
+        } catch {
+            throw NetworkError.decodingError(error)
+        }
+    }
+    
+    func fetchExchangeDetails(id: Int) async throws -> ExchangeDetail {
+        guard var components = URLComponents(string: "\(baseURL)/v1/exchange/info") else {
+            throw NetworkError.invalidURL
+        }
+        
+        components.queryItems = [URLQueryItem(name: "id", value: "\(id)")]
+        guard let url = components.url else { throw NetworkError.invalidURL }
+        
+        let data = try await performRequest(url: url)
+        
+        do {
+            let response = try JSONDecoder().decode(ExchangeInfoResponse.self, from: data)
+            guard let detail = response.data["\(id)"] else {
+                throw NetworkError.custom(message: "Exchange details not found in payload.")
+            }
+            return detail
+        } catch {
+            throw NetworkError.decodingError(error)
+        }
+    }
+    
+    func fetchExchangeAssets(id: Int) async throws -> [Asset] {
+        guard var components = URLComponents(string: "\(baseURL)/v1/exchange/assets") else {
+            throw NetworkError.invalidURL
+        }
+        
+        components.queryItems = [URLQueryItem(name: "id", value: "\(id)")]
+        guard let url = components.url else { throw NetworkError.invalidURL }
+        
+        let data = try await performRequest(url: url)
+        
+        do {
+            let response = try JSONDecoder().decode(ExchangeAssetsResponse.self, from: data)
             return response.data
         } catch {
             throw NetworkError.decodingError(error)

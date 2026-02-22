@@ -15,12 +15,14 @@ enum NetworkState {
 
 protocol ExchangeListViewModelDelegate: AnyObject {
     func didUpdateState(_ state: NetworkState)
+    func didSelectExchange(_ exchange: Exchange)
 }
 
 class ExchangeListViewModel {
     
     // MARK: - Properties
     weak var delegate: ExchangeListViewModelDelegate?
+    weak var coordinator: AppCoordinator?
     private let service: MarketDataServiceProtocol
     private(set) var exchanges: [Exchange] = []
     
