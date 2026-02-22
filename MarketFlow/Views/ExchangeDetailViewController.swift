@@ -16,6 +16,7 @@ class ExchangeDetailViewController: UIViewController {
     
     private let scrollView: UIScrollView = {
         let sv = UIScrollView()
+        sv.accessibilityIdentifier = "ExchangeDetailScrollView"
         sv.translatesAutoresizingMaskIntoConstraints = false
         return sv
     }()
@@ -95,6 +96,7 @@ class ExchangeDetailViewController: UIViewController {
     private let tableView: UITableView = {
         let tv = UITableView()
         tv.register(CoinTableViewCell.self, forCellReuseIdentifier: "CoinCell")
+        tv.accessibilityIdentifier = "ExchangeDetailAssetsTable"
         tv.translatesAutoresizingMaskIntoConstraints = false
         tv.isScrollEnabled = false // Scroll is handled by the outer scrollView
         return tv
@@ -103,6 +105,7 @@ class ExchangeDetailViewController: UIViewController {
     private let activityIndicator: UIActivityIndicatorView = {
         let indicator = UIActivityIndicatorView(style: .large)
         indicator.hidesWhenStopped = true
+        indicator.accessibilityIdentifier = "DetailLoadingIndicator"
         indicator.translatesAutoresizingMaskIntoConstraints = false
         return indicator
     }()

@@ -7,7 +7,25 @@
 		<key>MarketFlow.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>0</integer>
+			<integer>1</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>EA7907DD2F4B435000D227BA</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>EA7907F62F4B435200D227BA</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>EA7908002F4B435200D227BA</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>

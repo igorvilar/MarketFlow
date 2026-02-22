@@ -22,6 +22,7 @@ class ExchangeListViewController: UIViewController {
         table.dataSource = self
         table.delegate = self
         table.register(ExchangeTableViewCell.self, forCellReuseIdentifier: "ExchangeCell")
+        table.accessibilityIdentifier = "ExchangeListTable"
         table.translatesAutoresizingMaskIntoConstraints = false
         return table
     }()
@@ -29,6 +30,7 @@ class ExchangeListViewController: UIViewController {
     private let loadingIndicator: UIActivityIndicatorView = {
         let indicator = UIActivityIndicatorView(style: .large)
         indicator.hidesWhenStopped = true
+        indicator.accessibilityIdentifier = "ListLoadingIndicator"
         indicator.translatesAutoresizingMaskIntoConstraints = false
         return indicator
     }()
