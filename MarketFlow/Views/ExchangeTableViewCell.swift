@@ -41,6 +41,14 @@ class ExchangeTableViewCell: UITableViewCell {
         return label
     }()
     
+    private let logoImageView: UIImageView = {
+        let iv = UIImageView()
+        iv.contentMode = .scaleAspectFill
+        iv.clipsToBounds = true
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
+    }()
+    
     private let nameLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 18, weight: .bold)
@@ -94,6 +102,7 @@ class ExchangeTableViewCell: UITableViewCell {
         
         contentView.addSubview(cardView)
         cardView.addSubview(logoContainerView)
+        logoContainerView.addSubview(logoImageView)
         logoContainerView.addSubview(logoLabel)
         
         cardView.addSubview(stackView)
@@ -116,6 +125,12 @@ class ExchangeTableViewCell: UITableViewCell {
             logoContainerView.heightAnchor.constraint(equalToConstant: 48),
             logoContainerView.topAnchor.constraint(greaterThanOrEqualTo: cardView.topAnchor, constant: 16),
             logoContainerView.bottomAnchor.constraint(lessThanOrEqualTo: cardView.bottomAnchor, constant: -16),
+            
+            // Logo Image View
+            logoImageView.leadingAnchor.constraint(equalTo: logoContainerView.leadingAnchor),
+            logoImageView.trailingAnchor.constraint(equalTo: logoContainerView.trailingAnchor),
+            logoImageView.topAnchor.constraint(equalTo: logoContainerView.topAnchor),
+            logoImageView.bottomAnchor.constraint(equalTo: logoContainerView.bottomAnchor),
             
             // Logo Label inside Logo Container
             logoLabel.centerXAnchor.constraint(equalTo: logoContainerView.centerXAnchor),
@@ -144,11 +159,31 @@ class ExchangeTableViewCell: UITableViewCell {
         volumeLabel.text = volumeText
         dateLaunchedLabel.text = dateText
         
+        logoLabel.isHidden = false
+        logoImageView.isHidden = true
+        logoImageView.image = nil
+        
         // Use first letter of exchange name as placeholder logo
         if let firstChar = exchange.name.first {
             logoLabel.text = String(firstChar).uppercased()
         } else {
             logoLabel.text = "?"
+        }
+        
+        // Attempt to fetch correct logo image using predicted URL
+        if let url = exchange.logoURL {
+            Task {
+                if let data = try? Data(contentsOf: url), let image = UIImage(data: data) {
+                    await MainActor.run {
+                        // Prevent race condition in recycling by verifying Name matching
+                        if self.nameLabel.text == exchange.name {
+                            self.logoImageView.image = image
+                            self.logoImageView.isHidden = false
+                            self.logoLabel.isHidden = true
+                        }
+                    }
+                }
+            }
         }
     }
 }

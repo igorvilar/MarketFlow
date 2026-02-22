@@ -18,6 +18,10 @@ struct Exchange: Decodable, Identifiable {
     let slug: String
     let firstHistoricalData: String?
     
+    var logoURL: URL? {
+        return URL(string: "https://s2.coinmarketcap.com/static/img/exchanges/64x64/\(id).png")
+    }
+    
     enum CodingKeys: String, CodingKey {
         case id, name, slug
         case firstHistoricalData = "first_historical_data"
