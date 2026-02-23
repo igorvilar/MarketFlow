@@ -246,10 +246,10 @@ class ExchangeDetailViewController: UIViewController {
             websiteButton.isHidden = true
         }
         
-        // Logo Loading (Async image loading in a real app, keeping simple for snippet or using placeholder)
+        // Logo Loading Cache Fetch
         if let logoStr = detail.logo, let url = URL(string: logoStr) {
             Task {
-                if let data = try? Data(contentsOf: url), let image = UIImage(data: data) {
+                if let image = try? await ImageCache.shared.loadImage(from: url) {
                     await MainActor.run { self.logoImageView.image = image }
                 }
             }

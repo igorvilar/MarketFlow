@@ -170,10 +170,10 @@ class ExchangeTableViewCell: UITableViewCell {
             logoLabel.text = "?"
         }
         
-        // Attempt to fetch correct logo image using predicted URL
+        // Attempt to fetch correct logo image via Memory Cache
         if let url = exchange.logoURL {
             Task {
-                if let data = try? Data(contentsOf: url), let image = UIImage(data: data) {
+                if let image = try? await ImageCache.shared.loadImage(from: url) {
                     await MainActor.run {
                         // Prevent race condition in recycling by verifying Name matching
                         if self.nameLabel.text == exchange.name {
