@@ -8,7 +8,7 @@
 import Foundation
 
 protocol MarketDataServiceProtocol {
-    func fetchExchanges(limit: Int) async throws -> [Exchange]
+    func fetchExchanges(start: Int, limit: Int) async throws -> [Exchange]
     func fetchCoins(limit: Int) async throws -> [Coin]
     func fetchExchangeDetails(id: Int) async throws -> ExchangeDetail
     func fetchExchangeAssets(id: Int) async throws -> [Asset]
@@ -26,12 +26,13 @@ class MarketDataService: MarketDataServiceProtocol {
         self.session = session
     }
     
-    func fetchExchanges(limit: Int = 20) async throws -> [Exchange] {
+    func fetchExchanges(start: Int = 1, limit: Int = 20) async throws -> [Exchange] {
         guard var components = URLComponents(string: "\(baseURL)/v1/exchange/map") else {
             throw NetworkError.invalidURL
         }
         
         components.queryItems = [
+            URLQueryItem(name: "start", value: "\(start)"),
             URLQueryItem(name: "limit", value: "\(limit)")
         ]
         

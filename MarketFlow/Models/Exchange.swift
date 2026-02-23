@@ -12,7 +12,7 @@ struct ExchangeResponse: Decodable {
     let status: APIStatus
 }
 
-struct Exchange: Decodable, Identifiable {
+struct Exchange: Codable, Identifiable {
     let id: Int
     let name: String
     let slug: String

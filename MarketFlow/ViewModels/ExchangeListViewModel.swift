@@ -25,6 +25,83 @@ class ExchangeListViewModel {
     weak var coordinator: AppCoordinator?
     private let service: MarketDataServiceProtocol
     private(set) var exchanges: [Exchange] = []
+    private var isFetchingMore = false
+    private var hasMoreData = true
+    
+    // Pagination Controls
+    private var currentStart = 1
+    private let limitPerPage = 50
+    
+    // MARK: - Initialization
+    
+    init(service: MarketDataServiceProtocol = MarketDataService.shared) {
+        self.service = service
+    }
+    
+    // MARK: - Fetching Data
+    
+    func fetchExchanges() {
+        if let cachedExchanges = LocalCacheService.shared.loadExchanges(), !cachedExchanges.isEmpty {
+            self.exchanges = cachedExchanges
+            self.delegate?.didUpdateState(.loaded)
+        } else {
+            delegate?.didUpdateState(.loading)
+        }
+        
+        currentStart = 1
+        hasMoreData = true
+        
+        Task {
+            do {
+                let freshExchanges = try await service.fetchExchanges(start: currentStart, limit: limitPerPage)
+                self.hasMoreData = freshExchanges.count == limitPerPage
+                
+                await MainActor.run {
+                    self.exchanges = freshExchanges
+                    LocalCacheService.shared.saveExchanges(freshExchanges)
+                    self.delegate?.didUpdateState(.loaded)
+                }
+            } catch {
+                await MainActor.run {
+                    if self.exchanges.isEmpty {
+                        self.delegate?.didUpdateState(.error(error.localizedDescription))
+                    }
+                }
+            }
+        }
+    }
+    
+    func fetchMoreExchanges() {
+        guard !isFetchingMore, hasMoreData else { return }
+        
+        isFetchingMore = true
+        currentStart += limitPerPage
+        
+        Task {
+            do {
+                let newBatch = try await service.fetchExchanges(start: currentStart, limit: limitPerPage)
+                
+                if newBatch.isEmpty {
+                    self.hasMoreData = false
+                } else {
+                    await MainActor.run {
+                        self.exchanges.append(contentsOf: newBatch)
+                        LocalCacheService.shared.saveExchanges(self.exchanges)
+                    }
+                }
+                
+                await MainActor.run {
+                    self.isFetchingMore = false
+                    self.delegate?.didUpdateState(.loaded)
+                }
+            } catch {
+                await MainActor.run {
+                    self.isFetchingMore = false
+                    self.delegate?.didUpdateState(.loaded)
+                }
+            }
+        }
+    }
     
     // MARK: - Formatters
     private lazy var currencyFormatter: NumberFormatter = {
@@ -47,30 +124,6 @@ class ExchangeListViewModel {
         formatter.timeStyle = .none
         return formatter
     }()
-    
-    // MARK: - Init
-    init(service: MarketDataServiceProtocol = MarketDataService.shared) {
-        self.service = service
-    }
-    
-    // MARK: - Actions
-    func fetchExchanges() {
-        delegate?.didUpdateState(.loading)
-        
-        Task {
-            do {
-                let fetchedExchanges = try await service.fetchExchanges(limit: 50)
-                await MainActor.run {
-                    self.exchanges = fetchedExchanges
-                    self.delegate?.didUpdateState(.loaded)
-                }
-            } catch {
-                await MainActor.run {
-                    self.delegate?.didUpdateState(.error(error.localizedDescription))
-                }
-            }
-        }
-    }
     
     // MARK: - Helpers
     func formatVolume(_ volume: Double?) -> String {

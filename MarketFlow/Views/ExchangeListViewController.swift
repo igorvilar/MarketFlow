@@ -138,6 +138,27 @@ extension ExchangeListViewController: UITableViewDataSource, UITableViewDelegate
         let exchange = viewModel.exchanges[indexPath.section]
         viewModel.delegate?.didSelectExchange(exchange)
     }
+    
+    // MARK: - Pagination Tracking
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        let offsetY = scrollView.contentOffset.y
+        let contentHeight = scrollView.contentSize.height
+        let height = scrollView.frame.size.height
+        
+        // If user scrolled within 100pt of the bottom edge, trigger pagination
+        if offsetY > contentHeight - height - 100 {
+            // Attach a small spinner to the bottom purely for visual feedback
+            if tableView.tableFooterView == nil && !viewModel.exchanges.isEmpty {
+                let spinner = UIActivityIndicatorView(style: .medium)
+                spinner.startAnimating()
+                spinner.frame = CGRect(x: 0, y: 0, width: tableView.bounds.width, height: 44)
+                tableView.tableFooterView = spinner
+            }
+            
+            viewModel.fetchMoreExchanges()
+        }
+    }
 }
 
 // MARK: - ViewModel Delegate
@@ -151,6 +172,7 @@ extension ExchangeListViewController: ExchangeListViewModelDelegate {
             tableView.isHidden = true
         case .loaded:
             loadingIndicator.stopAnimating()
+            tableView.tableFooterView = nil // Hide pagination spinner if any
             tableView.isHidden = false
             tableView.reloadData()
         case .error(let message):

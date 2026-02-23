@@ -18,7 +18,7 @@ class MockMarketDataService: MarketDataServiceProtocol {
     var mockAssets: [Asset] = []
     var mockError: Error?
 
-    func fetchExchanges(limit: Int) async throws -> [Exchange] {
+    func fetchExchanges(start: Int, limit: Int) async throws -> [Exchange] {
         if let error = mockError { throw error }
         return mockExchanges
     }
@@ -73,6 +73,9 @@ struct ExchangeListViewModelTests {
     
     @Test("Successful fetch states")
     func testFetchExchangesSuccess() async throws {
+        // Clear local cache to simulate a fresh install and guarantee .loading -> .loaded state flow
+        LocalCacheService.shared.clearCache()
+        
         let mockService = MockMarketDataService()
         mockService.mockExchanges = [
             Exchange(id: 1, name: "Binance", slug: "binance", firstHistoricalData: "2017-07-14T00:00:00.000Z"),
@@ -109,6 +112,7 @@ struct ExchangeListViewModelTests {
     
     @Test("Failed fetch error state")
     func testFetchExchangesFailure() async throws {
+        LocalCacheService.shared.clearCache() // Emulate first usage to guarantee Error propagates visually
         let mockService = MockMarketDataService()
         mockService.mockError = NetworkError.forbidden
         
