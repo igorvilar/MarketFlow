@@ -21,7 +21,7 @@ class ExchangeDetailViewModel {
     let exchangeId: Int
     let exchangeName: String
     
-    @Inject private var marketDataService: MarketDataServiceProtocol
+    @Inject private var repository: ExchangeRepositoryProtocol
     
     init(exchangeId: Int, exchangeName: String) {
         self.exchangeId = exchangeId
@@ -33,8 +33,8 @@ class ExchangeDetailViewModel {
         
         Task {
             do {
-                async let detailTask = marketDataService.fetchExchangeDetails(id: exchangeId)
-                async let assetsTask = marketDataService.fetchExchangeAssets(id: exchangeId)
+                async let detailTask = repository.fetchExchangeDetails(id: exchangeId)
+                async let assetsTask = repository.fetchExchangeAssets(id: exchangeId)
                 
                 let (detail, assets) = try await (detailTask, assetsTask)
                 

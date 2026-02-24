@@ -20,7 +20,7 @@ class ExchangeListViewModel {
     @Published private(set) var state: NetworkState = .loading
     weak var coordinator: AppCoordinator?
     
-    @Inject private var service: MarketDataServiceProtocol
+    @Inject private var repository: ExchangeRepositoryProtocol
     
     private(set) var exchanges: [Exchange] = []
     private var isFetchingMore = false
@@ -36,7 +36,7 @@ class ExchangeListViewModel {
     // MARK: - Fetching Data
     
     func fetchExchanges() {
-        if let cachedExchanges = LocalCacheService.shared.loadExchanges(), !cachedExchanges.isEmpty {
+        if let cachedExchanges = repository.loadCachedExchanges(), !cachedExchanges.isEmpty {
             self.exchanges = cachedExchanges
             self.state = .loaded
         } else {
@@ -48,12 +48,12 @@ class ExchangeListViewModel {
         
         Task {
             do {
-                let freshExchanges = try await service.fetchExchanges(start: currentStart, limit: limitPerPage)
+                let freshExchanges = try await repository.fetchExchanges(start: currentStart, limit: limitPerPage)
                 self.hasMoreData = freshExchanges.count == limitPerPage
                 
                 await MainActor.run {
                     self.exchanges = freshExchanges
-                    LocalCacheService.shared.saveExchanges(freshExchanges)
+                    self.repository.saveExchangesToCache(freshExchanges)
                     self.state = .loaded
                 }
             } catch {
@@ -74,14 +74,14 @@ class ExchangeListViewModel {
         
         Task {
             do {
-                let newBatch = try await service.fetchExchanges(start: currentStart, limit: limitPerPage)
+                let newBatch = try await repository.fetchExchanges(start: currentStart, limit: limitPerPage)
                 
                 if newBatch.isEmpty {
                     self.hasMoreData = false
                 } else {
                     await MainActor.run {
                         self.exchanges.append(contentsOf: newBatch)
-                        LocalCacheService.shared.saveExchanges(self.exchanges)
+                        self.repository.saveExchangesToCache(self.exchanges)
                     }
                 }
                 

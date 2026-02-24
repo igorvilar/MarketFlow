@@ -10,23 +10,26 @@ import Foundation
 import Combine
 @testable import MarketFlow
 
-// MARK: - Mock Service
+// MARK: - Mock Repository
 
-class MockMarketDataService: MarketDataServiceProtocol {
+class MockExchangeRepository: ExchangeRepositoryProtocol {
     var mockExchanges: [Exchange] = []
-    var mockCoins: [Coin] = []
     var mockDetail: ExchangeDetail?
     var mockAssets: [Asset] = []
     var mockError: Error?
+    var mockCachedExchanges: [Exchange]? = nil
+
+    func loadCachedExchanges() -> [Exchange]? {
+        return mockCachedExchanges
+    }
+    
+    func saveExchangesToCache(_ exchanges: [Exchange]) {
+        self.mockCachedExchanges = exchanges
+    }
 
     func fetchExchanges(start: Int, limit: Int) async throws -> [Exchange] {
         if let error = mockError { throw error }
         return mockExchanges
-    }
-
-    func fetchCoins(limit: Int) async throws -> [Coin] {
-        if let error = mockError { throw error }
-        return mockCoins
     }
 
     func fetchExchangeDetails(id: Int) async throws -> ExchangeDetail {
@@ -53,12 +56,12 @@ struct MarketFlowAllTests {
         // Clear local cache to simulate a fresh install and guarantee .loading -> .loaded state flow
         LocalCacheService.shared.clearCache()
         
-        let mockService = MockMarketDataService()
-        mockService.mockExchanges = [
+        let mockRepo = MockExchangeRepository()
+        mockRepo.mockExchanges = [
             Exchange(id: 1, name: "Binance", slug: "binance", firstHistoricalData: "2017-07-14T00:00:00.000Z"),
             Exchange(id: 2, name: "Coinbase", slug: "coinbase", firstHistoricalData: nil)
         ]
-        DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: mockService)
+        DIContainer.shared.register(type: ExchangeRepositoryProtocol.self, component: mockRepo)
         
         let viewModel = ExchangeListViewModel()
         var states: [NetworkState] = []
@@ -93,9 +96,9 @@ struct MarketFlowAllTests {
     @Test("Failed fetch error state")
     func testFetchExchangesFailure() async throws {
         LocalCacheService.shared.clearCache() // Emulate first usage to guarantee Error propagates visually
-        let mockService = MockMarketDataService()
-        mockService.mockError = NetworkError.forbidden
-        DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: mockService)
+        let mockRepo = MockExchangeRepository()
+        mockRepo.mockError = NetworkError.forbidden
+        DIContainer.shared.register(type: ExchangeRepositoryProtocol.self, component: mockRepo)
         
         let viewModel = ExchangeListViewModel()
         var states: [NetworkState] = []
@@ -127,8 +130,8 @@ struct MarketFlowAllTests {
     
     @Test("Formatting Volume and Dates")
     func testFormattingHelpersList() async throws {
-        let mockService = MockMarketDataService()
-        DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: mockService)
+        let mockRepo = MockExchangeRepository()
+        DIContainer.shared.register(type: ExchangeRepositoryProtocol.self, component: mockRepo)
         let viewModel = ExchangeListViewModel()
         
         // Volume
@@ -154,16 +157,16 @@ struct MarketFlowAllTests {
     
     @Test("Successful concurrent fetch")
     func testFetchDetailsAndAssetsSuccess() async throws {
-        let mockService = MockMarketDataService()
+        let mockRepo = MockExchangeRepository()
         let detail = ExchangeDetail(id: 1, name: "Binance", logo: nil, description: "Desc", makerFee: 0.001, takerFee: 0.002, dateLaunched: "2017-07-14T00:00:00.000Z", urls: nil)
         let assets = [
             Asset(currency: AssetCurrency(name: "Bitcoin", symbol: "BTC", priceUsd: 50000.0)),
             Asset(currency: AssetCurrency(name: "Ethereum", symbol: "ETH", priceUsd: 3000.0))
         ]
         
-        mockService.mockDetail = detail
-        mockService.mockAssets = assets
-        DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: mockService)
+        mockRepo.mockDetail = detail
+        mockRepo.mockAssets = assets
+        DIContainer.shared.register(type: ExchangeRepositoryProtocol.self, component: mockRepo)
         
         let viewModel = ExchangeDetailViewModel(exchangeId: 1, exchangeName: "Binance")
         var states: [ExchangeDetailViewModel.State] = []
@@ -199,9 +202,9 @@ struct MarketFlowAllTests {
     
     @Test("Failed concurrent fetch due to single endpoint failure")
     func testFetchDetailsAndAssetsFailure() async throws {
-        let mockService = MockMarketDataService()
-        mockService.mockError = NetworkError.serverError // Simulate 500 error on fetching
-        DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: mockService)
+        let mockRepo = MockExchangeRepository()
+        mockRepo.mockError = NetworkError.serverError // Simulate 500 error on fetching
+        DIContainer.shared.register(type: ExchangeRepositoryProtocol.self, component: mockRepo)
         
         let viewModel = ExchangeDetailViewModel(exchangeId: 1, exchangeName: "Binance")
         var states: [ExchangeDetailViewModel.State] = []
@@ -233,7 +236,7 @@ struct MarketFlowAllTests {
     
     @Test("Formatting Currencies and Percentages")
     func testFormattingHelpersDetail() async throws {
-        DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: MockMarketDataService())
+        DIContainer.shared.register(type: ExchangeRepositoryProtocol.self, component: MockExchangeRepository())
         let viewModel = ExchangeDetailViewModel(exchangeId: 1, exchangeName: "Binance")
         
         let formattedCurrency = viewModel.formatCurrency(1234.56)

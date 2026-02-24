@@ -34,6 +34,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Register the Data Service Singleton against its defining Protocol
         container.register(type: MarketDataServiceProtocol.self, component: MarketDataService.shared)
         
+        // Register the Data Repository
+        container.register(type: ExchangeRepositoryProtocol.self, component: ExchangeRepository())
+        
         // The ViewModels don't need parameters manually passed anymore!
         // They will rely on the @Inject macro inside their own files if needed natively.
         // But for Coordinator construction, we register them ready to consume.
