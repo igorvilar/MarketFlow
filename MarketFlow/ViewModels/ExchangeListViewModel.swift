@@ -98,39 +98,14 @@ class ExchangeListViewModel {
         }
     }
     
-    // MARK: - Formatters
-    private lazy var currencyFormatter: NumberFormatter = {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        formatter.maximumFractionDigits = 0
-        return formatter
-    }()
-    
-    private lazy var dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ" // API Format
-        return formatter
-    }()
-    
-    private lazy var displayDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter
-    }()
-    
     // MARK: - Helpers
     func formatVolume(_ volume: Double?) -> String {
         guard let volume = volume else { return "Vol: N/A" }
-        return currencyFormatter.string(from: NSNumber(value: volume)) ?? "Vol: $" + String(format: "%.0f", volume)
+        return "Vol: \(volume.formatted(.currency(code: "USD").precision(.fractionLength(0))))"
     }
-    
+
     func formatDate(_ dateString: String?) -> String {
-        guard let dateString = dateString,
-              let date = dateFormatter.date(from: dateString) else {
-            return "Launched: Unknown"
-        }
-        return "Launched: " + displayDateFormatter.string(from: date)
+        let formattedDate = dateString?.parseISODate()?.formatted(date: .abbreviated, time: .omitted) ?? "Unknown"
+        return "Launched: \(formattedDate)"
     }
 }

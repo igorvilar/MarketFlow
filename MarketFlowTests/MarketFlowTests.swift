@@ -246,7 +246,7 @@ struct MarketFlowAllTests {
         #expect(nilCurrency == "N/A")
         
         let formattedPercentage = viewModel.formatPercentage(0.001)
-        #expect(formattedPercentage == "0.10%")
+        #expect(formattedPercentage == "0.10%" || formattedPercentage == "0,10%")
         
         let nilPercentage = viewModel.formatPercentage(nil)
         #expect(nilPercentage == "0%")

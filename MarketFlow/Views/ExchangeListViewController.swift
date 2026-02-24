@@ -134,7 +134,7 @@ extension ExchangeListViewController: UITableViewDataSource, UITableViewDelegate
         }
         
         let exchange = viewModel.exchanges[indexPath.section]
-        let volumeStr = "Vol: N/A (Free API)"
+        let volumeStr = viewModel.formatVolume(nil)
         let dateStr = viewModel.formatDate(exchange.firstHistoricalData)
         
         cell.configure(with: exchange, volumeText: volumeStr, dateText: dateStr)
