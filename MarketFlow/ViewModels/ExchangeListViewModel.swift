@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 enum NetworkState {
     case loading
@@ -13,15 +14,10 @@ enum NetworkState {
     case error(String)
 }
 
-protocol ExchangeListViewModelDelegate: AnyObject {
-    func didUpdateState(_ state: NetworkState)
-    func didSelectExchange(_ exchange: Exchange)
-}
-
 class ExchangeListViewModel {
     
     // MARK: - Properties
-    weak var delegate: ExchangeListViewModelDelegate?
+    @Published private(set) var state: NetworkState = .loading
     weak var coordinator: AppCoordinator?
     
     @Inject private var service: MarketDataServiceProtocol
@@ -42,9 +38,9 @@ class ExchangeListViewModel {
     func fetchExchanges() {
         if let cachedExchanges = LocalCacheService.shared.loadExchanges(), !cachedExchanges.isEmpty {
             self.exchanges = cachedExchanges
-            self.delegate?.didUpdateState(.loaded)
+            self.state = .loaded
         } else {
-            delegate?.didUpdateState(.loading)
+            self.state = .loading
         }
         
         currentStart = 1
@@ -58,12 +54,12 @@ class ExchangeListViewModel {
                 await MainActor.run {
                     self.exchanges = freshExchanges
                     LocalCacheService.shared.saveExchanges(freshExchanges)
-                    self.delegate?.didUpdateState(.loaded)
+                    self.state = .loaded
                 }
             } catch {
                 await MainActor.run {
                     if self.exchanges.isEmpty {
-                        self.delegate?.didUpdateState(.error(error.localizedDescription))
+                        self.state = .error(error.localizedDescription)
                     }
                 }
             }
@@ -91,12 +87,12 @@ class ExchangeListViewModel {
                 
                 await MainActor.run {
                     self.isFetchingMore = false
-                    self.delegate?.didUpdateState(.loaded)
+                    self.state = .loaded
                 }
             } catch {
                 await MainActor.run {
                     self.isFetchingMore = false
-                    self.delegate?.didUpdateState(.loaded)
+                    self.state = .loaded
                 }
             }
         }

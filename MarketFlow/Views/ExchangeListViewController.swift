@@ -6,12 +6,16 @@
 //
 
 import UIKit
+import Combine
 
 class ExchangeListViewController: UIViewController {
 
     // MARK: - Properties
     
+    // MARK: - Properties
+    
     private let viewModel: ExchangeListViewModel
+    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - UI Components
     
@@ -51,9 +55,33 @@ class ExchangeListViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        bindViewModel()
         
-        viewModel.delegate = self
         viewModel.fetchExchanges()
+    }
+    
+    // MARK: - Combine Bindings
+    
+    private func bindViewModel() {
+        viewModel.$state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                guard let self = self else { return }
+                switch state {
+                case .loading:
+                    self.loadingIndicator.startAnimating()
+                    self.tableView.isHidden = true
+                case .loaded:
+                    self.loadingIndicator.stopAnimating()
+                    self.tableView.tableFooterView = nil // Hide pagination spinner if any
+                    self.tableView.isHidden = false
+                    self.tableView.reloadData()
+                case .error(let message):
+                    self.loadingIndicator.stopAnimating()
+                    self.showErrorAlert(message: message)
+                }
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Setup UI
@@ -136,7 +164,7 @@ extension ExchangeListViewController: UITableViewDataSource, UITableViewDelegate
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         let exchange = viewModel.exchanges[indexPath.section]
-        viewModel.delegate?.didSelectExchange(exchange)
+        viewModel.coordinator?.showExchangeDetail(exchange: exchange)
     }
     
     // MARK: - Pagination Tracking
@@ -158,30 +186,5 @@ extension ExchangeListViewController: UITableViewDataSource, UITableViewDelegate
             
             viewModel.fetchMoreExchanges()
         }
-    }
-}
-
-// MARK: - ViewModel Delegate
-
-extension ExchangeListViewController: ExchangeListViewModelDelegate {
-    
-    func didUpdateState(_ state: NetworkState) {
-        switch state {
-        case .loading:
-            loadingIndicator.startAnimating()
-            tableView.isHidden = true
-        case .loaded:
-            loadingIndicator.stopAnimating()
-            tableView.tableFooterView = nil // Hide pagination spinner if any
-            tableView.isHidden = false
-            tableView.reloadData()
-        case .error(let message):
-            loadingIndicator.stopAnimating()
-            showErrorAlert(message: message)
-        }
-    }
-    
-    func didSelectExchange(_ exchange: Exchange) {
-        viewModel.coordinator?.showExchangeDetail(exchange: exchange)
     }
 }

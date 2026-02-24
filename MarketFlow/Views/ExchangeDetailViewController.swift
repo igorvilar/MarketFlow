@@ -6,11 +6,13 @@
 //
 
 import UIKit
+import Combine
 
 class ExchangeDetailViewController: UIViewController {
 
     let viewModel: ExchangeDetailViewModel
     private var assets: [Asset] = []
+    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - UI Components
     
@@ -131,8 +133,41 @@ class ExchangeDetailViewController: UIViewController {
         setupUI()
         title = viewModel.exchangeName
         
-        viewModel.delegate = self
+        bindViewModel()
         viewModel.fetchDetailsAndAssets()
+    }
+    
+    // MARK: - Combine Bindings
+    
+    private func bindViewModel() {
+        viewModel.$state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                guard let self = self else { return }
+                switch state {
+                case .loading:
+                    self.activityIndicator.startAnimating()
+                    self.scrollView.isHidden = true
+                case .loaded(let detail, let fetchedAssets):
+                    self.activityIndicator.stopAnimating()
+                    self.scrollView.isHidden = false
+                    self.assets = fetchedAssets
+                    self.updateUI(with: detail)
+                    self.tableView.reloadData()
+                    self.view.setNeedsLayout()
+                case .errorMessage(let message):
+                    self.activityIndicator.stopAnimating()
+                    let alert = UIAlertController(title: "Error", message: message, preferredStyle: .alert)
+                    alert.addAction(UIAlertAction(title: "Retry", style: .default) { _ in
+                        self.viewModel.fetchDetailsAndAssets()
+                    })
+                    alert.addAction(UIAlertAction(title: "Back", style: .cancel) { _ in
+                        self.navigationController?.popViewController(animated: true)
+                    })
+                    self.present(alert, animated: true)
+                }
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - UI Setup
@@ -290,34 +325,5 @@ extension ExchangeDetailViewController: UITableViewDataSource, UITableViewDelega
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-    }
-}
-
-// MARK: - ExchangeDetailViewModelDelegate
-
-extension ExchangeDetailViewController: ExchangeDetailViewModelDelegate {
-    func didUpdateState(_ state: ExchangeDetailViewModel.State) {
-        switch state {
-        case .loading:
-            activityIndicator.startAnimating()
-            scrollView.isHidden = true
-        case .loaded(let detail, let fetchedAssets):
-            activityIndicator.stopAnimating()
-            scrollView.isHidden = false
-            self.assets = fetchedAssets
-            updateUI(with: detail)
-            tableView.reloadData()
-            view.setNeedsLayout()
-        case .errorMessage(let message):
-            activityIndicator.stopAnimating()
-            let alert = UIAlertController(title: "Error", message: message, preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "Retry", style: .default) { _ in
-                self.viewModel.fetchDetailsAndAssets()
-            })
-            alert.addAction(UIAlertAction(title: "Back", style: .cancel) { _ in
-                self.navigationController?.popViewController(animated: true)
-            })
-            present(alert, animated: true)
-        }
     }
 }

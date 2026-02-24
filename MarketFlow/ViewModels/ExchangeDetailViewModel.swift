@@ -6,10 +6,7 @@
 //
 
 import Foundation
-
-protocol ExchangeDetailViewModelDelegate: AnyObject {
-    func didUpdateState(_ state: ExchangeDetailViewModel.State)
-}
+import Combine
 
 class ExchangeDetailViewModel {
     
@@ -19,7 +16,7 @@ class ExchangeDetailViewModel {
         case errorMessage(String)
     }
     
-    weak var delegate: ExchangeDetailViewModelDelegate?
+    @Published private(set) var state: State = .loading
     
     let exchangeId: Int
     let exchangeName: String
@@ -32,7 +29,7 @@ class ExchangeDetailViewModel {
     }
     
     func fetchDetailsAndAssets() {
-        delegate?.didUpdateState(.loading)
+        self.state = .loading
         
         Task {
             do {
@@ -42,11 +39,11 @@ class ExchangeDetailViewModel {
                 let (detail, assets) = try await (detailTask, assetsTask)
                 
                 await MainActor.run {
-                    self.delegate?.didUpdateState(.loaded(detail: detail, assets: assets))
+                    self.state = .loaded(detail: detail, assets: assets)
                 }
             } catch {
                 await MainActor.run {
-                    self.delegate?.didUpdateState(.errorMessage(error.localizedDescription))
+                    self.state = .errorMessage(error.localizedDescription)
                 }
             }
         }

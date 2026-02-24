@@ -7,6 +7,7 @@
 
 import Testing
 import Foundation
+import Combine
 @testable import MarketFlow
 
 // MARK: - Mock Service
@@ -40,32 +41,6 @@ class MockMarketDataService: MarketDataServiceProtocol {
     }
 }
 
-// MARK: - Mock Delegates
-
-@MainActor
-class MockListDelegate: ExchangeListViewModelDelegate {
-    var states: [NetworkState] = []
-    var selectedExchanges: [Exchange] = []
-    
-    func didUpdateState(_ state: NetworkState) {
-        states.append(state)
-    }
-    
-    func didSelectExchange(_ exchange: Exchange) {
-        selectedExchanges.append(exchange)
-    }
-}
-
-@MainActor
-class MockDetailDelegate: ExchangeDetailViewModelDelegate {
-    var states: [ExchangeDetailViewModel.State] = []
-    
-    func didUpdateState(_ state: ExchangeDetailViewModel.State) {
-        states.append(state)
-    }
-}
-
-
 // MARK: - Exchange List Tests
 
 @Suite("All Mock Application Tests", .serialized)
@@ -86,27 +61,29 @@ struct MarketFlowAllTests {
         DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: mockService)
         
         let viewModel = ExchangeListViewModel()
+        var states: [NetworkState] = []
+        var cancellables = Set<AnyCancellable>()
         
-        // Isolate delegate interactions on MainActor
-        let delegate = await MockListDelegate()
-        await MainActor.run { viewModel.delegate = delegate }
-        
-        await MainActor.run { viewModel.fetchExchanges() }
+        // Isolate interaction on MainActor
+        await MainActor.run {
+            viewModel.$state
+                .dropFirst() // Ignore the initial default .loading value assigned during init
+                .sink { state in
+                    states.append(state)
+                }
+                .store(in: &cancellables)
+            
+            viewModel.fetchExchanges()
+        }
         
         // Wait for unstructured task to complete
         try await Task.sleep(nanoseconds: 50_000_000) 
         
         await MainActor.run {
-            #expect(delegate.states.count == 2)
-            if case .loading = delegate.states.first {
-                #expect(true)
-            } else {
-                Issue.record("First state should be .loading")
-            }
-            if case .loaded = delegate.states.last {
-                #expect(true)
-            } else {
-                Issue.record("Last state should be .loaded")
+            #expect(states.count == 2)
+            if states.count >= 2 {
+                if case .loading = states[0] { #expect(true) } else { Issue.record("First state should be .loading") }
+                if case .loaded = states[1] { #expect(true) } else { Issue.record("Last state should be .loaded") }
             }
             #expect(viewModel.exchanges.count == 2)
             #expect(viewModel.exchanges[0].name == "Binance")
@@ -121,18 +98,28 @@ struct MarketFlowAllTests {
         DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: mockService)
         
         let viewModel = ExchangeListViewModel()
-        let delegate = await MockListDelegate()
-        await MainActor.run { viewModel.delegate = delegate }
+        var states: [NetworkState] = []
+        var cancellables = Set<AnyCancellable>()
         
-        await MainActor.run { viewModel.fetchExchanges() }
+        await MainActor.run {
+            viewModel.$state
+                .dropFirst()
+                .sink { state in states.append(state) }
+                .store(in: &cancellables)
+            
+            viewModel.fetchExchanges()
+        }
         try await Task.sleep(nanoseconds: 50_000_000)
         
         await MainActor.run {
-            #expect(delegate.states.count == 2)
-            if case .error(let msg) = delegate.states.last {
-                #expect(msg == NetworkError.forbidden.localizedDescription)
-            } else {
-                Issue.record("Expected .error state")
+            #expect(states.count == 2)
+            if states.count >= 2 {
+                if case .loading = states[0] { #expect(true) } else { Issue.record("First state should be .loading") }
+                if case .error(let msg) = states[1] {
+                    #expect(msg == NetworkError.forbidden.localizedDescription)
+                } else {
+                    Issue.record("Expected .error state")
+                }
             }
             #expect(viewModel.exchanges.isEmpty)
         }
@@ -179,27 +166,33 @@ struct MarketFlowAllTests {
         DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: mockService)
         
         let viewModel = ExchangeDetailViewModel(exchangeId: 1, exchangeName: "Binance")
-        let delegate = await MockDetailDelegate()
-        await MainActor.run { viewModel.delegate = delegate }
+        var states: [ExchangeDetailViewModel.State] = []
+        var cancellables = Set<AnyCancellable>()
         
-        await MainActor.run { viewModel.fetchDetailsAndAssets() }
+        await MainActor.run {
+            viewModel.$state
+                .dropFirst()
+                .sink { state in states.append(state) }
+                .store(in: &cancellables)
+            
+            viewModel.fetchDetailsAndAssets()
+        }
+        
         try await Task.sleep(nanoseconds: 100_000_000)
         
         await MainActor.run {
-            #expect(delegate.states.count == 2)
-            if case .loading = delegate.states.first {
-                #expect(true)
-            } else {
-                Issue.record("First state should be loading")
-            }
-            
-            if case .loaded(let fetchedDetail, let fetchedAssets) = delegate.states.last {
-                #expect(fetchedDetail.name == "Binance")
-                #expect(fetchedDetail.makerFee == 0.001)
-                #expect(fetchedAssets.count == 2)
-                #expect(fetchedAssets[0].currency.symbol == "BTC")
-            } else {
-                Issue.record("Expected loaded state with details and assets")
+            #expect(states.count == 2)
+            if states.count >= 2 {
+                if case .loading = states[0] { #expect(true) } else { Issue.record("First state should be loading") }
+                
+                if case .loaded(let fetchedDetail, let fetchedAssets) = states[1] {
+                    #expect(fetchedDetail.name == "Binance")
+                    #expect(fetchedDetail.makerFee == 0.001)
+                    #expect(fetchedAssets.count == 2)
+                    #expect(fetchedAssets[0].currency.symbol == "BTC")
+                } else {
+                    Issue.record("Expected loaded state with details and assets")
+                }
             }
         }
     }
@@ -211,18 +204,29 @@ struct MarketFlowAllTests {
         DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: mockService)
         
         let viewModel = ExchangeDetailViewModel(exchangeId: 1, exchangeName: "Binance")
-        let delegate = await MockDetailDelegate()
-        await MainActor.run { viewModel.delegate = delegate }
+        var states: [ExchangeDetailViewModel.State] = []
+        var cancellables = Set<AnyCancellable>()
         
-        await MainActor.run { viewModel.fetchDetailsAndAssets() }
+        await MainActor.run {
+            viewModel.$state
+                .dropFirst()
+                .sink { state in states.append(state) }
+                .store(in: &cancellables)
+            
+            viewModel.fetchDetailsAndAssets()
+        }
         try await Task.sleep(nanoseconds: 50_000_000)
         
         await MainActor.run {
-            #expect(delegate.states.count == 2)
-            if case .errorMessage(let msg) = delegate.states.last {
-                #expect(msg == NetworkError.serverError.localizedDescription)
-            } else {
-                Issue.record("Expected error state")
+            #expect(states.count == 2)
+            if states.count >= 2 {
+                if case .loading = states[0] { #expect(true) } else { Issue.record("First state should be loading") }
+                
+                if case .errorMessage(let msg) = states[1] {
+                    #expect(msg == NetworkError.serverError.localizedDescription)
+                } else {
+                    Issue.record("Expected error state")
+                }
             }
         }
     }
