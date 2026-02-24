@@ -23,7 +23,9 @@ class ExchangeListViewModel {
     // MARK: - Properties
     weak var delegate: ExchangeListViewModelDelegate?
     weak var coordinator: AppCoordinator?
-    private let service: MarketDataServiceProtocol
+    
+    @Inject private var service: MarketDataServiceProtocol
+    
     private(set) var exchanges: [Exchange] = []
     private var isFetchingMore = false
     private var hasMoreData = true
@@ -33,10 +35,7 @@ class ExchangeListViewModel {
     private let limitPerPage = 50
     
     // MARK: - Initialization
-    
-    init(service: MarketDataServiceProtocol = MarketDataService.shared) {
-        self.service = service
-    }
+    init() {}
     
     // MARK: - Fetching Data
     

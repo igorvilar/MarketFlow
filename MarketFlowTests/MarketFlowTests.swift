@@ -68,8 +68,10 @@ class MockDetailDelegate: ExchangeDetailViewModelDelegate {
 
 // MARK: - Exchange List Tests
 
-@Suite("Exchange List View Model Tests")
-struct ExchangeListViewModelTests {
+@Suite("All Mock Application Tests", .serialized)
+struct MarketFlowAllTests {
+
+    struct ExchangeListViewModelTests {
     
     @Test("Successful fetch states")
     func testFetchExchangesSuccess() async throws {
@@ -81,8 +83,9 @@ struct ExchangeListViewModelTests {
             Exchange(id: 1, name: "Binance", slug: "binance", firstHistoricalData: "2017-07-14T00:00:00.000Z"),
             Exchange(id: 2, name: "Coinbase", slug: "coinbase", firstHistoricalData: nil)
         ]
+        DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: mockService)
         
-        let viewModel = ExchangeListViewModel(service: mockService)
+        let viewModel = ExchangeListViewModel()
         
         // Isolate delegate interactions on MainActor
         let delegate = await MockListDelegate()
@@ -115,8 +118,9 @@ struct ExchangeListViewModelTests {
         LocalCacheService.shared.clearCache() // Emulate first usage to guarantee Error propagates visually
         let mockService = MockMarketDataService()
         mockService.mockError = NetworkError.forbidden
+        DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: mockService)
         
-        let viewModel = ExchangeListViewModel(service: mockService)
+        let viewModel = ExchangeListViewModel()
         let delegate = await MockListDelegate()
         await MainActor.run { viewModel.delegate = delegate }
         
@@ -136,7 +140,9 @@ struct ExchangeListViewModelTests {
     
     @Test("Formatting Volume and Dates")
     func testFormattingHelpersList() async throws {
-        let viewModel = ExchangeListViewModel(service: MockMarketDataService())
+        let mockService = MockMarketDataService()
+        DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: mockService)
+        let viewModel = ExchangeListViewModel()
         
         // Volume
         let formattedVol = viewModel.formatVolume(1234567.89)
@@ -157,8 +163,7 @@ struct ExchangeListViewModelTests {
 
 // MARK: - Exchange Detail Tests
 
-@Suite("Exchange Detail View Model Tests")
-struct ExchangeDetailViewModelTests {
+    struct ExchangeDetailViewModelTests {
     
     @Test("Successful concurrent fetch")
     func testFetchDetailsAndAssetsSuccess() async throws {
@@ -171,8 +176,9 @@ struct ExchangeDetailViewModelTests {
         
         mockService.mockDetail = detail
         mockService.mockAssets = assets
+        DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: mockService)
         
-        let viewModel = ExchangeDetailViewModel(exchangeId: 1, exchangeName: "Binance", marketDataService: mockService)
+        let viewModel = ExchangeDetailViewModel(exchangeId: 1, exchangeName: "Binance")
         let delegate = await MockDetailDelegate()
         await MainActor.run { viewModel.delegate = delegate }
         
@@ -202,8 +208,9 @@ struct ExchangeDetailViewModelTests {
     func testFetchDetailsAndAssetsFailure() async throws {
         let mockService = MockMarketDataService()
         mockService.mockError = NetworkError.serverError // Simulate 500 error on fetching
+        DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: mockService)
         
-        let viewModel = ExchangeDetailViewModel(exchangeId: 1, exchangeName: "Binance", marketDataService: mockService)
+        let viewModel = ExchangeDetailViewModel(exchangeId: 1, exchangeName: "Binance")
         let delegate = await MockDetailDelegate()
         await MainActor.run { viewModel.delegate = delegate }
         
@@ -222,7 +229,8 @@ struct ExchangeDetailViewModelTests {
     
     @Test("Formatting Currencies and Percentages")
     func testFormattingHelpersDetail() async throws {
-        let viewModel = ExchangeDetailViewModel(exchangeId: 1, exchangeName: "Binance", marketDataService: MockMarketDataService())
+        DIContainer.shared.register(type: MarketDataServiceProtocol.self, component: MockMarketDataService())
+        let viewModel = ExchangeDetailViewModel(exchangeId: 1, exchangeName: "Binance")
         
         let formattedCurrency = viewModel.formatCurrency(1234.56)
         #expect(formattedCurrency.contains("1,234.56") || formattedCurrency.contains("1.234,56") || formattedCurrency.contains("$"))
@@ -235,5 +243,6 @@ struct ExchangeDetailViewModelTests {
         
         let nilPercentage = viewModel.formatPercentage(nil)
         #expect(nilPercentage == "0%")
+    }
     }
 }

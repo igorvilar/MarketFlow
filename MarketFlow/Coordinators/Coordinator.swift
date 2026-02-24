@@ -20,6 +20,8 @@ class AppCoordinator: Coordinator {
     
     var navigationController: UINavigationController
     
+    @Inject private var exchangeListViewModel: ExchangeListViewModel
+    
     init(navigationController: UINavigationController) {
         self.navigationController = navigationController
         // Large titles look nice for Market apps
@@ -27,9 +29,8 @@ class AppCoordinator: Coordinator {
     }
     
     func start() {
-        let exchangeViewModel = ExchangeListViewModel()
-        exchangeViewModel.coordinator = self
-        let exchangeVC = ExchangeListViewController(viewModel: exchangeViewModel)
+        exchangeListViewModel.coordinator = self
+        let exchangeVC = ExchangeListViewController(viewModel: exchangeListViewModel)
         navigationController.pushViewController(exchangeVC, animated: false)
     }
     

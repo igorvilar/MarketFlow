@@ -23,12 +23,12 @@ class ExchangeDetailViewModel {
     
     let exchangeId: Int
     let exchangeName: String
-    private let marketDataService: MarketDataServiceProtocol
     
-    init(exchangeId: Int, exchangeName: String, marketDataService: MarketDataServiceProtocol = MarketDataService.shared) {
+    @Inject private var marketDataService: MarketDataServiceProtocol
+    
+    init(exchangeId: Int, exchangeName: String) {
         self.exchangeId = exchangeId
         self.exchangeName = exchangeName
-        self.marketDataService = marketDataService
     }
     
     func fetchDetailsAndAssets() {

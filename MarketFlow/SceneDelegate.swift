@@ -15,6 +15,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         
+        setupDependencies()
+        
         let window = UIWindow(windowScene: windowScene)
         let navigationController = UINavigationController()
         
@@ -24,6 +26,18 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window.rootViewController = navigationController
         self.window = window
         window.makeKeyAndVisible()
+    }
+    
+    private func setupDependencies() {
+        let container = DIContainer.shared
+        
+        // Register the Data Service Singleton against its defining Protocol
+        container.register(type: MarketDataServiceProtocol.self, component: MarketDataService.shared)
+        
+        // The ViewModels don't need parameters manually passed anymore!
+        // They will rely on the @Inject macro inside their own files if needed natively.
+        // But for Coordinator construction, we register them ready to consume.
+        container.register(type: ExchangeListViewModel.self, component: ExchangeListViewModel())
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {
