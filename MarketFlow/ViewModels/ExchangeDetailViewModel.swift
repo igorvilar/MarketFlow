@@ -60,7 +60,12 @@ class ExchangeDetailViewModel {
     }
     
     func formatDate(_ dateString: String?) -> String {
-        guard let dateString = dateString else { return "Unknown Launch Date" }
-        return dateString.parseISODate()?.formatted(date: .abbreviated, time: .omitted) ?? "Unknown Launch Date"
+        guard let dateString = dateString, let date = dateString.parseISODate() else { return "Unknown Launch Date" }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        formatter.timeZone = TimeZone(abbreviation: "UTC")
+        formatter.locale = Locale(identifier: "en_US")
+        return formatter.string(from: date)
     }
 }

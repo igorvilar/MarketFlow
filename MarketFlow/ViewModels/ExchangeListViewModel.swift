@@ -105,7 +105,12 @@ class ExchangeListViewModel {
     }
 
     func formatDate(_ dateString: String?) -> String {
-        let formattedDate = dateString?.parseISODate()?.formatted(date: .abbreviated, time: .omitted) ?? "Unknown"
-        return "Launched: \(formattedDate)"
+        guard let date = dateString?.parseISODate() else { return "Launched: Unknown" }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        formatter.timeZone = TimeZone(abbreviation: "UTC")
+        formatter.locale = Locale(identifier: "en_US")
+        return "Launched: \(formatter.string(from: date))"
     }
 }
